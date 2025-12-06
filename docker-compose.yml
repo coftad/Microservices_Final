@@ -1,0 +1,146 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:15
+    networks:
+      - app-network
+    container_name: db
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: main
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    networks:
+      - app-network
+    container_name: zookeeper
+    hostname: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        cub kafka-ready -b kafka:9092 1 30 &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits &&
+        echo 'Successfully created topic: url_hits'"
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    networks:
+      - app-network
+    container_name: kafka
+    hostname: kafka
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Add these new configurations
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+
+      # Listeners - Add both internal and external
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Required for single-broker operation
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_OFFSETS_RETENTION_MINUTES: 10080
+      KAFKA_GROUP_MIN_SESSION_TIMEOUT_MS: 6000
+    ports:
+      - "29092:29092"
+
+
+  auth_service:
+    build: ./auth_service
+    networks:
+      - app-network
+    container_name: auth_service
+    restart: always
+    depends_on:
+      - db
+    environment:
+      AUTH_DATABASE_URL: postgresql://postgres:password@db:5432/main
+      JWT_SECRET_KEY: mysecretjwtkey
+    ports:
+      - "8001:8001"
+
+  shortener_service:
+    build: ./shortener_service
+    networks:
+      - app-network
+    container_name: shortener_service
+    restart: always
+    depends_on:
+      - db
+      - kafka
+      - auth_service
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/main
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: url_hits
+      BASE_URL: http://localhost:8000
+    ports:
+      - "8000:8000"
+
+  analytics_service:
+    build: ./analytics_service
+    networks:
+      - app-network
+    container_name: analytics_service
+    depends_on:
+      kafka-setup:
+        condition: service_completed_successfully
+      db:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/main
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: url_hits
+      KAFKA_GROUP_ID: analytics-consumer-group
+      KAFKA_AUTO_OFFSET_RESET: earliest
+    restart: always
+    ports:
+      - "8002:8002"
+
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge
+
