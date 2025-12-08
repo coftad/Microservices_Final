@@ -141,6 +141,19 @@ services:
     ports:
       - "8002:8002"
 
+  frontend:
+    image: nginx:alpine
+    container_name: frontend
+    networks:
+      - app-network
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - auth_service
+      - shortener_service
+      - analytics_service
 
 volumes:
   pgdata:
