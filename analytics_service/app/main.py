@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from .database import Base, engine
+from fastapi.middleware.cors import CORSMiddleware
 from .routers import stats
-import asyncio
+from .database import engine, Base
 from .consumer import consume_events
+import asyncio
 
-app = FastAPI()
+app = FastAPI(title="Analytics Service")
 
 @app.on_event("startup")
 async def startup_event():
@@ -15,6 +16,6 @@ async def startup_event():
 
 app.include_router(stats.router)
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+@app.get("/")
+def read_root():
+    return {"message": "Analytics Service"}

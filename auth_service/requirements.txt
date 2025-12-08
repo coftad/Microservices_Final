@@ -9,4 +9,6 @@ PyJWT
 email-validator
 python-multipart
 bcrypt==4.0.1
+aiokafka
+python-jose
 
