@@ -20,4 +20,12 @@ def verify_admin_token(token: str = Depends(oauth2_scheme)):
     if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    return response.json()
+    user_data = response.json()
+
+    if not user_data.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Admin privileges required."
+        )
+    
+    return user_data

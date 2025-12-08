@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from datetime import datetime
+import requests
+import os
+
 from app.database import SessionLocal
 from app.models import ShortURL
 from app.schemas import URLCreate, URLResponse
 from app.utils import generate_short_code
 from app.config import settings
 from app.security import verify_token
-from app.kafka_producer import send_hit_event
+from app.kafka_producer import send_url_hit
 
 router = APIRouter()
 
@@ -40,19 +45,19 @@ def create_short_url(payload: URLCreate, user=Depends(verify_token), db: Session
 
 
 @router.get("/{short_code}")
-async def redirect(short_code: str, request: Request, db: Session = Depends(get_db)):
-    record = db.query(ShortURL).filter(ShortURL.short_code == short_code).first()
-    if not record:
+async def redirect_url(short_code: str, request: Request, db: Session = Depends(get_db)):
+    url_entry = db.query(ShortURL).filter(ShortURL.short_code == short_code).first()
+    if not url_entry:
         raise HTTPException(status_code=404, detail="URL not found")
 
-    # Increment hit_count (optional)
-    record.hit_count += 1
+    # Update hit count
+    url_entry.hit_count += 1
     db.commit()
 
-    # Send event to Kafka
-    ua = request.headers.get("User-Agent")
-    await send_hit_event(short_code, ua)
+    # Send event to Kafka asynchronously
+    user_agent = request.headers.get("user-agent", "unknown")
+    await send_url_hit(short_code, user_agent)
 
-    return {"redirect_to": record.original_url}
+    return RedirectResponse(url=url_entry.original_url)
 
 

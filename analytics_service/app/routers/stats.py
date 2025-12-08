@@ -25,7 +25,7 @@ def list_all(db: Session = Depends(get_db), user: dict = Depends(verify_admin_to
     results = db.query(Hit.short_code, func.count(Hit.id)).group_by(Hit.short_code).all()
     return {"summary": [{"short_code": s, "hits": h} for s, h in results]}
 
-@router.get("/admin/endpoint-stats")
+@router.get("/endpoint-stats")
 def get_endpoint_statistics(
     service: str = Query(None, description="Filter by service name"),
     hours: int = Query(24, description="Last N hours"),

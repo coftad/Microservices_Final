@@ -11,6 +11,7 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
+    is_admin: bool
 
     class Config:
         orm_mode = True

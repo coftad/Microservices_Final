@@ -30,7 +30,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         )
     new_user = models.User(
         email=user.email,
-        hashed_password=hash_password(user.password)
+        hashed_password=hash_password(user.password),
+        is_admin=False
     )
     db.add(new_user)
     db.commit()
@@ -50,7 +51,7 @@ def login(
             detail="Incorrect email or password"
         )
 
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "is_admin": user.is_admin})
     return Token(access_token=token)
 
 # Dependency other services can reuse

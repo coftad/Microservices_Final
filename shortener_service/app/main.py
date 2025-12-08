@@ -4,10 +4,10 @@ from .routers import shortener
 from .database import engine, Base
 import time
 from datetime import datetime
-import json
-from .kafka_producer import get_producer
+import asyncio
+from .kafka_producer import get_producer, send_endpoint_metric, close_producer
 
-app = FastAPI(title="Shortener Service")
+app = FastAPI(title="URL Shortener Service")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,15 +17,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create database tables on startup
 @app.on_event("startup")
 async def startup_event():
-    """Create database tables on startup"""
+    """Create database tables and initialize Kafka on startup"""
     try:
         Base.metadata.create_all(bind=engine)
         print("✓ Database tables created successfully")
     except Exception as e:
         print(f"Warning: Could not create tables on startup: {e}")
+    
+    # Initialize Kafka producer
+    await get_producer()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close Kafka producer on shutdown"""
+    await close_producer()
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -54,16 +61,12 @@ async def log_requests(request: Request, call_next):
         "user_id": user_id
     }
     
-    producer = get_producer()
-    if producer:
-        try:
-            producer.send("endpoint_metrics", value=metric_data)
-        except Exception as e:
-            print(f"Failed to send metrics: {e}")
+    # Send asynchronously
+    asyncio.create_task(send_endpoint_metric(metric_data))
     
     return response
 
-app.include_router(shortener.router)
+app.include_router(shortener.router, tags=["shortener"])
 
 @app.get("/")
 def read_root():
