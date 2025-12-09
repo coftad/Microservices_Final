@@ -61,11 +61,8 @@ services:
         condition: service_healthy
     command: >
       bash -c "
-        echo 'Waiting for Kafka to be ready...' &&
-        cub kafka-ready -b kafka:9092 1 30 &&
-        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits &&
-        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic endpoint_metrics &&
-        echo 'Successfully created topic: url_hits, endpoint_metrics'"
+        kafka-topics --bootstrap-server kafka:9092 --list
+        echo 'Kafka is ready'
       "
     networks:
       - app-network
