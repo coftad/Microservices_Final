@@ -61,8 +61,11 @@ services:
         condition: service_healthy
     command: >
       bash -c "
-        kafka-topics --bootstrap-server kafka:9092 --list
-        echo 'Kafka is ready'
+        echo 'Waiting for Kafka to be ready...' &&
+        cub kafka-ready -b kafka:9092 1 30 &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic endpoint_metrics &&
+        echo 'Successfully created topic: url_hits, endpoint_metrics'"
       "
     networks:
       - app-network
@@ -97,7 +100,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@db:5432/main}
       KAFKA_BOOTSTRAP: kafka:9092
       KAFKA_TOPIC: url_hits
-      BASE_URL: http://localhost:8000
+      BASE_URL: http://159.223.136.60:8000
     ports:
       - "8000:8000"
 
