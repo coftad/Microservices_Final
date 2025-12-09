@@ -28,55 +28,40 @@ services:
     ports:
       - "2181:2181"
 
-  kafka-setup:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      kafka:
-        condition: service_healthy
-    command: bash -c "echo 'Waiting for Kafka...' && cub kafka-ready -b kafka:9092 1 30 && kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits && kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic endpoint_metrics && echo 'Topics created successfully'"
-    networks:
-      - app-network
-
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     networks:
       - app-network
     container_name: kafka
     hostname: kafka
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
-      interval: 15s
-      timeout: 15s
-      retries: 10
-      start_period: 60s
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
-      # Add these new configurations
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 1
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
-
-      # Listeners - Add both internal and external
       KAFKA_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://159.223.136.60:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-      # Required for single-broker operation
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_OFFSETS_RETENTION_MINUTES: 10080
       KAFKA_GROUP_MIN_SESSION_TIMEOUT_MS: 6000
     ports:
       - "29092:29092"
 
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - kafka
+    command: bash -c "echo 'Waiting for Kafka...' && sleep 30 && kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits && kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic endpoint_metrics && echo 'Topics created successfully'"
+    networks:
+      - app-network
 
   auth_service:
     build: ./auth_service
@@ -87,7 +72,6 @@ services:
     depends_on:
       - db
       - kafka
-      - kafka-setup
     environment:
       AUTH_DATABASE_URL: ${AUTH_DATABASE_URL:-postgresql://postgres:password@db:5432/main}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-mysecretjwtkey}
@@ -104,7 +88,6 @@ services:
     depends_on:
       - db
       - kafka
-      - kafka-setup
       - auth_service
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@db:5432/main}
@@ -120,12 +103,8 @@ services:
       - app-network
     container_name: analytics_service
     depends_on:
-      kafka-setup:
-        condition: service_completed_successfully
-      db:
-        condition: service_started
-      kafka:
-        condition: service_healthy
+      - db
+      - kafka
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@db:5432/main}
       KAFKA_BOOTSTRAP: kafka:9092
@@ -142,7 +121,7 @@ services:
     networks:
       - app-network
     ports:
-      - "3000:80"
+      - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:
@@ -156,4 +135,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-
