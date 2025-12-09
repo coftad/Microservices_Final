@@ -59,11 +59,12 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    command: >
-      bash -c "
-        kafka-topics --bootstrap-server kafka:9092 --list
-        echo 'Kafka is ready'
-      "
+    command: |
+      bash -c "echo 'Waiting for Kafka...' && 
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic url_hits && 
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic endpoint_metrics && 
+      kafka-topics --list --bootstrap-server kafka:9092 && 
+      echo 'Topics created successfully'"
     networks:
       - app-network
 
