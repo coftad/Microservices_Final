@@ -44,7 +44,7 @@ services:
     container_name: kafka
     hostname: kafka
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
       interval: 15s
       timeout: 15s
       retries: 10
