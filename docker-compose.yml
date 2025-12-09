@@ -33,7 +33,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    command: >
+    command: |
       bash -c "
         echo 'Waiting for Kafka to be ready...' &&
         cub kafka-ready -b kafka:9092 1 30 &&
