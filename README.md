@@ -24,7 +24,7 @@ This application demonstrates a complete microservices architecture with:
        │              │              │              │
 ┌──────▼──────┐ ┌────▼─────┐ ┌──────▼───────┐ ┌───▼────────┐
 │Auth Service │ │Shortener │ │  Analytics   │ │ PostgreSQL │
-│  (Port 8001)│ │(Port 8000)│ │ (Port 8002)  │ │ (Port 5432)│
+│  (Port 8001)│ │(Port8000)│ │ (Port 8002)  │ │ (Port 5432)│
 └──────┬──────┘ └────┬─────┘ └──────▲───────┘ └────────────┘
        │             │               │
        │             │               │
@@ -61,7 +61,6 @@ This application demonstrates a complete microservices architecture with:
 - Metrics include:
   - Total requests per endpoint
   - Average response latency
-  - Success rate percentage
   - Service-level breakdown
 
 ### Frontend
@@ -174,7 +173,6 @@ POST /auth/register
 Content-Type: application/json
 
 {
-  "username": "john_doe",
   "email": "john@example.com",
   "password": "securepassword123"
 }
@@ -184,7 +182,6 @@ Content-Type: application/json
 ```json
 {
   "id": 1,
-  "username": "john_doe",
   "email": "john@example.com"
 }
 ```
@@ -195,7 +192,7 @@ POST /auth/login
 Content-Type: application/json
 
 {
-  "username": "john_doe",
+  "username": "john@example.com",
   "password": "securepassword123"
 }
 ```
@@ -218,8 +215,7 @@ Authorization: Bearer <token>
 ```json
 {
   "id": 1,
-  "username": "john_doe",
-  "email": "john@example.com"
+  "username": "john@example.com",
 }
 ```
 
@@ -239,18 +235,14 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "id": 1,
-  "short_code": "abc123",
-  "original_url": "https://www.example.com/very/long/url",
   "short_url": "http://159.223.136.60:8000/abc123",
-  "click_count": 0,
   "created_at": "2025-12-09T00:00:00Z"
 }
 ```
 
-#### Get User's URLs
+#### Redirect Short URL
 ```http
-GET /urls
+GET /{short_code}
 Authorization: Bearer <token>
 ```
 
@@ -258,19 +250,9 @@ Authorization: Bearer <token>
 ```json
 [
   {
-    "id": 1,
-    "short_code": "abc123",
     "original_url": "https://www.example.com/very/long/url",
-    "short_url": "http://159.223.136.60:8000/abc123",
-    "click_count": 42,
-    "created_at": "2025-12-09T00:00:00Z"
   }
 ]
-```
-
-#### Redirect Short URL
-```http
-GET /{short_code}
 ```
 
 **Response:** 307 Redirect to original URL
