@@ -141,7 +141,7 @@ services:
     networks:
       - app-network
     ports:
-      - "3000:80"
+      - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:
