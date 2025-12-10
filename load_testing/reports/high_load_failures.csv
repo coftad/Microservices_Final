@@ -1,0 +1,7 @@
+Method,Name,Error,Occurrences
+POST,/shorten,"ReadTimeout(ReadTimeoutError(""HTTPConnectionPool(host='159.223.136.60', port=8000): Read timed out. (read timeout=10)""))",2
+GET,/auth/me,RemoteDisconnected('Remote end closed connection without response'),1
+POST,/auth/register,"ReadTimeout(ReadTimeoutError(""HTTPConnectionPool(host='159.223.136.60', port=8001): Read timed out. (read timeout=15)""))",13
+GET,/{short_code} (redirect),RemoteDisconnected('Remote end closed connection without response'),5
+GET,/auth/me,"ReadTimeout(ReadTimeoutError(""HTTPConnectionPool(host='159.223.136.60', port=8001): Read timed out. (read timeout=10)""))",2
+POST,/auth/login,"ReadTimeout(ReadTimeoutError(""HTTPConnectionPool(host='159.223.136.60', port=8001): Read timed out. (read timeout=15)""))",6
