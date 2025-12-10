@@ -456,6 +456,143 @@ Microservices_Final/
 └── README.md                # This file
 ```
 
+## Load Testing
+
+The project includes comprehensive load testing using Locust to evaluate system performance under various loads. Be sure to go into `locustfile.py` and change the Droplet IP listed to your specific Droplet instance. Be sure to clear volumes and empty ./load_testing/reports after every use.
+
+### Prerequisites
+
+```bash
+cd load_testing
+pip install -r requirements.txt
+```
+
+### Quick Test (2 minutes, 20 users)
+
+```bash
+locust -f locustfile.py --headless --users 20 --spawn-rate 5 --run-time 2m --html reports/quick_test.html --csv reports/quick_test
+```
+
+### Full Test Suite
+
+Run all 3 test scenarios automatically:
+
+```bash
+# Windows
+run_tests.bat
+
+# Linux/Mac
+chmod +x run_tests.sh
+./run_tests.sh
+```
+
+**Test Scenarios:**
+- **Light Load**: 10 users, 2 minutes - baseline performance
+- **Medium Load**: 20 users, 3 minutes - typical production load
+- **High Load**: 50 users, 3 minutes - peak usage simulation
+
+### Analyze Results
+
+After running tests, generate a comprehensive performance analysis:
+
+```bash
+python analyze_results.py
+```
+
+This produces:
+- ✅ Response time statistics per endpoint
+- ✅ Success/failure rates
+- ✅ Throughput (requests/sec)
+- ✅ Scalability comparison across test scenarios
+- ✅ Performance bottleneck identification
+
+### View HTML Reports
+
+```bash
+# Windows
+start reports\quick_test.html
+
+# Linux/Mac
+open reports/quick_test.html
+```
+
+### Test Coverage
+
+The load tests simulate realistic user behavior:
+
+1. **User Registration** (JSON) - Creates unique test users
+2. **User Login** (OAuth2 form) - Authenticates and obtains JWT tokens
+3. **Create Short URLs** (5x weight) - POST /shorten with auth
+4. **Access Short URLs** (10x weight) - GET /{short_code} redirects
+5. **Verify Tokens** (2x weight) - GET /auth/me token validation
+
+### Expected Results
+
+**Typical Performance Metrics:**
+- Success Rate: >99%
+- Average Response Time: <500ms
+- P95 Response Time: <1000ms
+- Throughput: 5-10 req/sec (20 users)
+
+**Under Heavy Load (100 users):**
+- Success Rate: >95%
+- Average Response Time: <2000ms
+- Throughput: 20-50 req/sec
+
+### Interpreting Results
+
+**Good Performance:**
+- ✅ Success rate >99%
+- ✅ P95 latency <1000ms
+- ✅ Linear scalability with user increase
+
+**Warning Signs:**
+- ⚠️ Success rate 95-99%
+- ⚠️ P95 latency 1000-3000ms
+- ⚠️ Exponential latency growth
+
+**Performance Issues:**
+- ❌ Success rate <95%
+- ❌ P95 latency >3000ms
+- ❌ High connection failures
+
+### Cleanup
+
+After testing, remove test data and free disk space:
+
+```bash
+docker-compose down -v
+```
+
+### Custom Load Tests
+
+Run custom scenarios:
+
+```bash
+# 500 users, 5 minutes, aggressive spawn rate
+locust -f locustfile.py --headless --users 500 --spawn-rate 50 --run-time 5m --html reports/custom_test.html
+
+# Interactive mode (web UI on http://localhost:8089)
+locust -f locustfile.py
+```
+
+### Troubleshooting
+
+**High failure rates:**
+- Check Docker container resources: `docker stats`
+- Increase connection timeouts in locustfile.py
+- Scale services: `docker-compose up -d --scale shortener_service=3`
+
+**Slow response times:**
+- Monitor database performance: `docker logs postgres_db`
+- Check Kafka consumer lag: `docker logs analytics_service`
+- Review Nginx logs: `docker logs nginx`
+
+**AttributeError in tests:**
+- Ensure all services are running: `docker-compose ps`
+- Verify network connectivity: `curl http://159.223.136.60:8001/docs`
+- Check service health endpoints
+
 ## Security Considerations
 
 - ✅ JWT tokens expire after 30 minutes
@@ -494,3 +631,6 @@ This project is created for educational purposes as part of a microservices arch
 ---
 
 **Live Demo:** http://159.223.136.60 (Replace with your server IP)
+
+
+
