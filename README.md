@@ -163,6 +163,11 @@ docker-compose up -d --build
 docker-compose logs -f
 ```
 
+7. **Create Admin User**
+```
+docker exec -it db psql -U postgres -d main -c "UPDATE users SET is_admin = true WHERE email = 'example@admin.com';"
+```
+
 ## API Documentation
 
 ### Authentication Service (Port 8001)
