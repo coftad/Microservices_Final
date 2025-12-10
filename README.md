@@ -451,7 +451,13 @@ Microservices_Final/
 │   └── requirements.txt
 ├── frontend/
 │   ├── index.html           # App logic & looks
-│   ├── Dockerfile           
+│   ├── Dockerfile
+├── auth_service/
+│   ├── reports/             # stores reports from testing cases
+│   ├── locustfile.py        # Load testing script
+│   ├── run_tests.bat        # Load testing batch
+│   ├── analyze_results.py   # Aggregate load testing results
+│   └── requirements.txt         
 ├── docker-compose.yml       # Service orchestration
 └── README.md                # This file
 ```
